@@ -1,5 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const routes = require('./routes');
 
 const app = express();
 
@@ -9,12 +10,7 @@ mongoose.connect('mongodb+srv://nathanbarsoti:notebook100@cluster0-cfn0q.mongodb
 });
 
 app.use(express.json());
-
-app.get('/', (req, res) => {
-    return res.json({
-        message: "App is working!"
-    });
-});
+app.use(routes);
 
 app.listen(3333);
 
