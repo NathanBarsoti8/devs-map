@@ -4,8 +4,12 @@ import { StyleSheet, Image, View, Text, TextInput, TouchableOpacity } from 'reac
 import { requestPermissionsAsync, getCurrentPositionAsync } from 'expo-location';
 import { MaterialIcons } from '@expo/vector-icons';
 
+import api from '../services/api';
+
 function Main({ navigation }) {
+    const [devs, setDevs] = useState([]);
     const [currentRegion, setCurrentRegion] = useState(null)
+    const [techs, setTechs] = useState('');
 
     useEffect(() => {
         async function loadInitialPosition() {
@@ -29,27 +33,58 @@ function Main({ navigation }) {
         loadInitialPosition();
     }, []);
 
+    async function loadDevs() {
+        const { latitude, longitude } = currentRegion;
+
+        const response = await api.get('/search', {
+            params: {
+                latitude,
+                longitude,
+                techs
+            }
+        });
+
+        setDevs(response.data.devs);
+    }
+
+    function handleRegionChanged(region) {
+        setCurrentRegion(region);
+    }
+
     if (!currentRegion) {
         return null;
     }
 
     return (
         <>
-            <MapView initialRegion={currentRegion} style={styles.map}>
-                <Marker coordinate={{ latitude: -21.5984535, longitude: -48.7996236 }}>
-                    <Image style={styles.avatar} source={{ uri: 'https://avatars2.githubusercontent.com/u/38732047?s=460&v=4' }} />
+            <MapView onRegionChangeComplete={handleRegionChanged}
+                initialRegion={currentRegion} style={styles.map}>
 
-                    <Callout onPress={() => {
-                        //Navigation to other page
-                        navigation.navigate('Profile', { github_username: 'NathanBarsoti8' })
-                    }}>
-                        <View style={styles.callout}>
-                            <Text style={styles.devName}>Nathan Barsoti</Text>
-                            <Text style={styles.devBio}>Internal at Programmer's Beyond IT</Text>
-                            <Text style={styles.devTechs}>Angular, AspNet, SQL Server</Text>
-                        </View>
-                    </Callout>
-                </Marker>
+                {devs.map(dev => (
+                    <Marker
+                        key={dev._id}
+                        coordinate={{
+                            longitude: dev.location.coordinates[0],
+                            latitude: dev.location.coordinates[1]
+                        }}>
+
+                        <Image style={styles.avatar} source={{ uri: dev.avatar_url }} />
+
+                        <Callout onPress={() => {
+                            //Navigation to other page
+                            navigation.navigate('Profile', { github_username: dev.github_username })
+                        }}>
+                            <View style={styles.callout}>
+                                <Text style={styles.devName}>{dev.name}</Text>
+                                <Text style={styles.devBio}>{dev.bio}</Text>
+                                <Text style={styles.devTechs}>{dev.techs.join(', ')}</Text>
+                            </View>
+
+                        </Callout>
+
+                    </Marker>
+                ))}
+
             </MapView>
 
             <View style={styles.searchForm}>
@@ -59,8 +94,10 @@ function Main({ navigation }) {
                     placeholderTextColor="#999"
                     autoCapitalize="words"
                     autoCorrect={false}
+                    value={techs}
+                    onChangeText={setTechs}
                 />
-                <TouchableOpacity onPress={() => {}} style={styles.searchButton}>
+                <TouchableOpacity onPress={loadDevs} style={styles.searchButton}>
                     <MaterialIcons name="my-location" size={20} color="#FFF" />
                 </TouchableOpacity>
             </View>
